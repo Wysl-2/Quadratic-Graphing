@@ -13,10 +13,10 @@
         return { x, y };
     }
     
-    function evaluateRange(q: Coefficients, r: Interval): Vector2[]
+    function evaluateRange(q: Coefficients, r: Interval, h: number = 1): Vector2[]
     {
         const points: Vector2[] = [];
-        for(let i = r.min; i <= r.max; i++)
+        for(let i = r.min; i <= r.max; i += h)
         {
             points.push(evaluate(q, i));
         }
@@ -25,8 +25,8 @@
     
     const viewport: Size2D = {width: 800, height: 800};
     
-    const xRange: Interval = { min: -10, max: 10 };
-    const yRange: Interval = { min: -10, max: 10 };
+    const xRange: Interval = { min: -20, max: 20 };
+    const yRange: Interval = { min: -20, max: 20 };
     
     const scale: Vector2 = {
         x: viewport.width / (xRange.max - xRange.min),
@@ -44,18 +44,42 @@
         return { x, y }
     }
     
+    function createPathString(points: Vector2[]): string
+    {
+        const p1 = mapPoint(points[0])
+        let d = `M ${p1.x} ${p1.y}`;
+        for(let i = 1; i < points.length; i++)
+        {
+            const p = mapPoint(points[i]);
+            const s = ` L ${p.x} ${p.y}`;
+            d += s;
+        }
+        return d;
+    }
+    
     const a: Vector2 = { x: 5, y: 0};
     const p = mapPoint(a);
     
+    //let dataPoints: Vector2[] = $state([]);
+    let pathString: string = $state("");
+    
     onMount(() => {
-        const q: Coefficients = {a: 2, b:-3, c:1}
-        const r: Interval = { min: -10, max: 10 };
+        const q: Coefficients = {a: 0.5, b:-5, c:4}
+        // const r: Interval = { min: -10, max: 10 };
+        const h: number = 0.1;
         
-        const points = evaluateRange(q, r);
+        const points = evaluateRange(q, xRange, h);
+        
+        // dataPoints = points.filter(
+        //     point => point.y <= yRange.max && 
+        //              point.y >= yRange.min
+        // );
+        
+        pathString = createPathString(points);
         console.log(points);
-        // const point: Vector2 = evaluate(q, 2);
-        // console.log(point);
-        // console.log(mapPoint(point));
+        console.log(pathString);
+        
+        // console.log($state.snapshot(dataPoints));
     })
         
 </script>
@@ -65,6 +89,17 @@
          style:width={`${viewport.width}px`} style:height={`${viewport.height}px`}>
         <line x1="0" y1={origin.y} x2={viewport.width} y2={origin.y} stroke="black" />
         <line x1={origin.x} y1="0" x2={origin.x} y2={viewport.height} stroke="black" />
-        <circle cx={p.x} cy={p.y} r="2" fill="black" />
+        <path
+                d={pathString}
+                stroke="orange"
+                stroke-width="2"
+                fill="none"
+        />
     </svg>
 </div>
+
+<style>
+    .svg-graph {
+        background-color: gray;
+    }
+</style>

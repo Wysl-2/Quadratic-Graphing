@@ -9,7 +9,9 @@
     import { evaluateQuadratic } from "#lib/math/quadratic/quadratic.ts";
     import type { Quadratic, EvaluateFunction } from "#lib/math/quadratic/quadratic.ts";
     import { evaluateQuadraticDerivative } from "#lib/math/quadratic/differentiation.ts";
+    import { pointAlongLine } from "#lib/viewport/geometry/lineGeometry.svelte.ts"
     
+    import type { Line2D } from "#lib/viewport/types.ts";
 
     const viewport = new Viewport({width: 800, height: 800});
     const grid = new Grid({gridSpacing: 1});
@@ -38,10 +40,27 @@
 
     const evaluator: EvaluateFunction =
         (x) => evaluateQuadratic(quadratic, x);
+
+
+    const x = 3
+    const point: Vector2 = { x, y: evaluator(x) };
     
-    const slope = evaluateQuadraticDerivative(quadratic, 4)
+    const slope = evaluateQuadraticDerivative(quadratic, point.x)
     console.log(slope)
-    
+
+    // Move right
+    const right = pointAlongLine(point, slope, 3);
+
+    // Move left
+    const left = pointAlongLine(point, slope, -3);
+
+    const line: Line2D = $derived({
+        start: viewport.worldToViewport(left),
+        end: viewport.worldToViewport(right)
+    });
+
+    console.log(right); // { x: 5, y: 6 }
+    console.log(left);  // { x: 3, y: -2 }
     //const y = evaluateQuadratic(quadratic, 4);
     
     
@@ -87,6 +106,7 @@
             viewBox={`0 0 ${viewport.width} ${viewport.height}`}
             use:controls
     >
+        
 
         {#if enableViewportAxis}
         <!-- Draw viewport x axis -->
@@ -159,6 +179,14 @@
                 stroke-width="2"
                 fill="none"
         />
+        <line
+                x1={line.start.x}
+                y1={line.start.y}
+                x2={line.end.x}
+                y2={line.end.y}
+                stroke="blue"
+                stroke-width="1"
+        />
     </svg>
 </div>
 
@@ -167,5 +195,6 @@
         background-color: white;
         border: 1px solid black;
         margin: 5px;
+        touch-action: none;
     }
 </style>

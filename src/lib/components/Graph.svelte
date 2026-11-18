@@ -6,13 +6,13 @@
     import { createSvgViewportAction } from "#lib/viewport/controls/viewportControls.ts";
 
     import type { Vector2, Range } from '#lib/viewport/types.ts';
-    import type {StandardCoefficients, VertexCoefficients, FactoredCoefficients, EvaluateFunction} from "#lib/math/quadratic/quadratic.ts";
-    import {evaluateFactoredCoefficients, evaluateStandardCoefficients, evaluateVertexCoefficients} from "#lib/math/quadratic/quadratic.ts";
+    import { evaluateQuadratic } from "#lib/math/quadratic/quadratic.ts";
+    import type { Quadratic, EvaluateFunction } from "#lib/math/quadratic/quadratic.ts";
+    import { evaluateQuadraticDerivative } from "#lib/math/quadratic/differentiation.ts";
     
-    
-    
-    const viewport = new Viewport();
-    const grid = new Grid();
+
+    const viewport = new Viewport({width: 800, height: 800});
+    const grid = new Grid({gridSpacing: 1});
     const axes = new AxesGeometry(viewport);
     const gridGeo = new GridGeometry(viewport, grid);
     
@@ -29,15 +29,32 @@
     let pointerCoordinates: Vector2 = $state({x: 0, y: 0});
     let enableViewportAxis: boolean = $state(false);
     
+    const MAX_SAMPLES = 100000
+    const h: number = 0.1;
+
+    //const quadratic: Quadratic = { form: "standard", coefficients: {a: 1, b: -4 , c:2 } };
+    const quadratic: Quadratic = { form: "vertex", coefficients: { a: 1, h: 2, k:-2 } };
+    // const quadratic: Quadratic = { form: "factored", coefficients: {a: 1, r1:(2 + Math.sqrt(2)), r2:(2 - Math.sqrt(2)) } };
+
+    const evaluator: EvaluateFunction =
+        (x) => evaluateQuadratic(quadratic, x);
+    
+    const slope = evaluateQuadraticDerivative(quadratic, 4)
+    console.log(slope)
+    
+    //const y = evaluateQuadratic(quadratic, 4);
     
     
+    const pathString = $derived(createPath(evaluator, viewport.xRange, h));
+
+
     function createPath(evaluator: EvaluateFunction, r: Range, h: number): string
     {
         if(h <= 0 || !Number.isFinite(h))
             return "";
-        if(!Number.isFinite(r.min) || 
-           !Number.isFinite(r.max) ||
-           r.min >= r.max) {
+        if(!Number.isFinite(r.min) ||
+            !Number.isFinite(r.max) ||
+            r.min >= r.max) {
             return "";
         }
         const maxIndex = Math.floor((r.max - r.min) / h);
@@ -48,42 +65,11 @@
         for (let n = 0; n <= maxIndex; n++)
         {
             const x = r.min + (n * h)
-            const p = evaluator(x);
-            const t = viewport.worldToViewport(p);
+            const y = evaluator(x);
+            const t = viewport.worldToViewport({x, y});
             d += `${n === 0 ? "M" : " L"} ${t.x} ${t.y}`
         }
-        console.log(`Path Created - SampleCount: ${sampleCount}`);
         return d
-    }
-    
-    const MAX_SAMPLES = 100000
-    const h: number = 0.1;
-    const standard: StandardCoefficients = {a: 1, b:-3, c:-4}
-    const vertex: VertexCoefficients = {a: 1, h: 1, k: -1}
-    const factored: FactoredCoefficients = { a: -5, r1: -5, r2: 5 }
-
-    const standardEvaluator: EvaluateFunction =
-        (x) => evaluateStandardCoefficients(standard, x);
-
-    const vertexEvaluator: EvaluateFunction =
-        (x) => evaluateVertexCoefficients(vertex, x);
-
-    const factoredEvaluator: EvaluateFunction =
-        (x) => evaluateFactoredCoefficients(factored, x);
-    
-    const pathString = $derived(createPath(standardEvaluator, viewport.xRange, h));
-
-
-
-    function handlePointerMove(event: PointerEvent)
-    {
-        const svg = event.currentTarget as SVGSVGElement;
-        const rect = svg.getBoundingClientRect();
-
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-
-        pointerCoordinates = viewport.viewportToWorld({x: x, y: y});
     }
     
 </script>
@@ -177,7 +163,9 @@
 </div>
 
 <style>
-    .svg-graph {
-        background-color: gray;
+    svg {
+        background-color: white;
+        border: 1px solid black;
+        margin: 5px;
     }
 </style>
